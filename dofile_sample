@@ -1,0 +1,62 @@
+#!/usr/bin/ruby
+HERE = File.dirname(__FILE__)
+
+
+# A few requires for helpers
+require 'rubygems'
+require 'uri'
+require 'net/http'
+
+
+# helpers
+def check_running(host, title = '')
+  Proc.new{
+    begin
+      Net::HTTP.get(URI.parse('http://' + host))
+    rescue
+      puts "#{title} (#{host})".ljust(35) + "OFF"
+    else
+      puts "#{title} (#{host})".ljust(35) + "RUNNING"
+    end
+  }
+end
+
+
+# commands list
+PROJECTS = {
+    :default => {
+      :start    => "script/server -d",
+      :stop     => "mongrel_rails stop -P tmp/pids/mongrel.pid",
+      :cleanup  => [:stop, "echo 'Deleting tmp/pids/mongrel.pid' && rm tmp/pids/mongrel.pid"],
+      :restart  => [:stop, :start],
+      :status   => check_running('localhost:3000'),
+      :pull     => "git pull origin master",
+      :push     => "git push origin master",
+      :gs       => "git status",
+      :gpp      => [:pull, :push],
+      :gc       => ["git commit -am \":message\"", %w(message)],
+      :add      => "echo 'Adding files to git' && git add .",
+      :test     => "rake",
+      :deploy   => "cap deploy"
+    },
+    :jaxer => {
+      :start    => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru start",
+      :stop     => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru stop",
+      :cleanup  => :stop,
+      :status   => Proc.new{
+        check_running('localhost:8081', 'Apache Server').call
+        check_running('localhost:4567', 'Sinatra Service').call
+      }
+    },
+    :assets => {
+      :start    => "script/server -p6500 -d",
+      :status   => check_running('localhost:6500')
+    },
+    :products => {
+      :start    => "script/server -p6600 -d",
+      :status   => check_running('localhost:6600')
+    },
+    :front => {
+      :start    => "script/server -p3000 -d"
+    }
+}

@@ -1,0 +1,219 @@
+= Doer
+
+Doer is a tiny procedural script for running tasks and commands on multiple subdirectories.
+It is very useful if you're creating multi-app projects, like SOA (Service Oriented Architecture) projects.
+
+I purposefully didn't want to make it into a gem. This project is meant to be a very small hackable tool with all source at fingertips. 
+It won't grow and develop much from where it is now, as it already has everything it was meant to have.
+
+
+== Install
+=== Step 1
+Download "do" and "dofile_sample" into your root directory which contains all your project subdirectories.
+
+=== Step 2
+  chmod +x do 
+
+=== Step 3
+  mv dofile_sample dofile
+  mate dofile
+
+=== Step 4
+Customize your dofile. (See Usage)
+
+When finished - run commands using 
+  
+  ./do command-name [project-name] [arg1, arg2, ...]
+
+== Usage
+Let's say you have two applications in your project: foo and bar. They're in their own subfolders.
+
+=== Starting "dofile"
+We shall create the dofile and start making PROJECTS hash.
+
+  #!/usr/bin/ruby
+  HERE = File.dirname(__FILE__)
+  
+  PROJECTS = {
+    :foo,
+    :bar
+  }
+  
+=== Simple shell commands
+Ok, got our setup, now it's command-making time. First thing - let's make a "start" command.
+
+  PROJECTS = {
+    :foo => {
+      :start => "script/server -p6500 -d"
+    },
+    :bar => {
+      :start => "script/server -p6600 -d"
+    }
+  }
+  
+The above code will allow me to run the following shell commands.
+
+  ./do start
+  ./do start all
+  ./do start foo
+  ./do start bar
+
+
+The first two lines are identical in function. There are some cases where "all" is required, but mostly
+it can be omitted when targeting all subfolders. 
+
+
+=== Using default commands
+Let's write the stop command now.
+
+  PROJECTS = {
+    :foo => {
+      :start  => "script/server -p6500 -d",
+      :stop   => "mongrel_rails stop -P tmp/pids/mongrel.pid"
+    },
+    :bar => {
+      :start  => "script/server -p6600 -d",
+      :stop   => "mongrel_rails stop -P tmp/pids/mongrel.pid"
+    }
+  }
+
+Now you notice that :stop is identical for foo and bar.  It'd be great to keep it DRY. That's why there's :default section.
+
+  PROJECTS = {
+    :default => {
+      :stop   => "mongrel_rails stop -P tmp/pids/mongrel.pid"
+    },
+    :foo => {
+      :start  => "script/server -p6500 -d"
+    },
+    :bar => {
+      :start  => "script/server -p6600 -d"
+    }
+  }
+
+:default is a fallback section.  It's only used if a project doesn't have its own implementation of the requested command.
+
+=== Linking commands
+Time to write :restart. Restart is essentially stop and start.  There's certainly an easy way to do this.
+
+  PROJECTS = {
+    :default => {
+      :stop     => "mongrel_rails stop -P tmp/pids/mongrel.pid",
+      :restart  => [:stop, :start]
+    },
+    :foo => {
+      :start    => "script/server -p6500 -d"
+    },
+    :bar => {
+      :start    => "script/server -p6600 -d"
+    }
+  }
+
+
+That's all! Now you have:
+
+  ./do restart
+  ./do restart foo
+  ./do restart bar
+  
+Convenient.
+
+=== Passing params to commands
+Let's talk about a more interesting case.
+You want to be able to commit multiple project into your repository, using the same commit message for all. Easy.
+
+  PROJECTS = {
+    :default => {
+      :stop     => "mongrel_rails stop -P tmp/pids/mongrel.pid",
+      :restart  => [:stop, :start],
+      :gc       => ["git commit -am \":message\"", %w(message)] # <= this is the new task
+    },
+    :foo => {
+      :start    => "script/server -p6500 -d"
+    },
+    :bar => {
+      :start    => "script/server -p6600 -d"
+    }
+  }
+ 
+As you can see - we created a :gc command. The ":message" string will be replaced by the first param in the command line.
+The array basically says that first param is called "message", which allows us to place a :message token in the string.
+Now we can do the following.
+
+  ./do gc all "Some commit message"
+  ./do gc foo "Some commit message"
+  ./do gc bar "Some commit message"
+  
+Notice: in this case it's required to use "all" to indicate we want to run across all projects.
+Otherwise script will think that "Some commit message" is the name of the project.
+
+=== Using Procs
+Last but not least, you can use Procs.
+Let's say you want a task that will verify if a host is running. Let's pass a proc.
+
+For this we will need a few requires.
+
+  require 'rubygems'
+  require 'uri'
+  require 'net/http'
+  
+  PROJECTS = {
+    :default => {
+      :stop     => "mongrel_rails stop -P tmp/pids/mongrel.pid",
+      :restart  => [:stop, :start],
+      :gc       => ["git commit -am \":message\"", %w(message)]
+    },
+    :foo => {
+      :start    => "script/server -p6500 -d",
+      :status   => Proc.new {
+        begin
+          message = "Foo Server (localhost:6500)".ljust(35)
+          Net::HTTP.get(URI.parse('http://localhost:6500'))
+        rescue
+          puts  message + "OFF"
+        else
+          puts  message + "RUNNING"
+        end
+      }
+    },
+    :bar => {
+      :start    => "script/server -p6600 -d",
+      :status   => Proc.new {
+        begin
+          message = "Bar Server (localhost:6600)".ljust(35)
+          Net::HTTP.get(URI.parse('http://localhost:6600'))
+        rescue
+          puts  message + "OFF"
+        else
+          puts  message + "RUNNING"
+        end
+      }
+    }
+  }
+
+You can DRY-up the last example by putting helper methods into dofile. 
+That's all!
+ 
+
+== License
+
+Copyright (c) 2008 Maxim Chernyak
+ 
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+ 
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
