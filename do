@@ -5,10 +5,6 @@ load 'dofile'
 
 class Doer
   class << self
-    def cd_here(who, cmd)
-      "cd #{HERE}/#{who} && #{cmd}"
-    end
-  
     def run(who, what, args)
       command = find_cmd(who, what)
       templates, replacements = normalize_cmd(who, command)
@@ -24,6 +20,11 @@ class Doer
       exit
     end
     
+    private
+    def cd_here(who, cmd)
+      "cd #{HERE}/#{who} && #{cmd}"
+    end
+    
     def normalize_cmd(project, command)
       commands = []
       replacements = []
@@ -36,7 +37,7 @@ class Doer
           replacements += ref_replacements
           
         elsif token.class == Array
-          replacements << token
+          replacements += token
         
         elsif token.class == String
           commands << token

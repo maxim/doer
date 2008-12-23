@@ -43,9 +43,7 @@ PROJECTS = {
       :start    => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru start",
       :stop     => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru stop",
       :cleanup  => :stop,
-      :status   => Proc.new{
-        check_running('localhost:8081', 'Apache Server').call
-        check_running('localhost:4567', 'Sinatra Service').call
+      :status   => [check_running('localhost:8081', 'Apache Server'), check_running('localhost:4567', 'Sinatra Service')]
       }
     },
     :assets => {
