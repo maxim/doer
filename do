@@ -10,11 +10,13 @@ class Doer
       templates, replacements = normalize_cmd(who, command)
       commands = apply_replacements(templates, replacements, args)
       
-      puts "------------ #{who.to_s.upcase} #{what.to_s.upcase} ------------\n"
-      commands.each do |cmd|
-        cmd.class == Proc ? cmd.call : system(cd_here(who, cmd))
+      if commands.size > 0
+        puts "------------ #{who.to_s.upcase} #{what.to_s.upcase} ------------\n"
+        commands.each do |cmd|
+          cmd.class == Proc ? cmd.call : system(cd_here(who, cmd))
+        end
+        puts "\n\n"
       end
-      puts "\n\n"
     rescue DoerException => e
       puts e.message
       exit
@@ -31,6 +33,7 @@ class Doer
       
       command.each do |token|
         if token.class == Symbol
+          break if token == :skip
           c = find_cmd(project, token)
           ref_cmds, ref_replacements = normalize_cmd(project, c)
           commands += ref_cmds

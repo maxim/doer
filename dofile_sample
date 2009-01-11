@@ -36,15 +36,22 @@ PROJECTS = {
       :gpp      => [:pull, :push],
       :gc       => ["git commit -am \":message\"", %w(message)],
       :add      => "echo 'Adding files to git' && git add .",
+      :diff     => "git diff",
       :test     => "rake",
-      :deploy   => "cap deploy"
+      :deploy   => "cap deploy",
+      :routes   => 'rake routes',
+      :sc       => 'script/console',
+      :watch    => 'tail -f log/development.log'
     },
     :jaxer => {
       :start    => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru start",
       :stop     => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru stop",
       :cleanup  => :stop,
-      :status   => [check_running('localhost:8081', 'Apache Server'), check_running('localhost:4567', 'Sinatra Service')]
-      }
+      :sc       => :skip,
+      :routes   => :skip,
+      :status   => [check_running('localhost:8081', 'Apache Server'), 
+                    check_running('localhost:4567', 'Sinatra Service')],
+      :watch    => 'tail -f log/thin.4567.log'
     },
     :assets => {
       :start    => "script/server -p6500 -d",
@@ -56,5 +63,26 @@ PROJECTS = {
     },
     :front => {
       :start    => "script/server -p3000 -d"
+    },
+    :docs => {
+      :start    => :skip,
+      :stop     => :skip,
+      :cleanup  => :skip,
+      :status   => :skip,
+      :test     => :skip,
+      :deploy   => :skip,
+      :routes   => :skip,
+      :sc       => :skip,
+      :watch    => :skip
+    },
+    :resources => {
+      :start    => :skip,
+      :stop     => :skip,
+      :cleanup  => :skip,
+      :status   => :skip,
+      :test     => :skip,
+      :routes   => :skip,
+      :sc       => :skip,
+      :watch    => :skip
     }
 }
