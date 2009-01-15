@@ -44,8 +44,14 @@ PROJECTS = {
       :watch    => 'tail -f log/development.log'
     },
     :jaxer => {
-      :start    => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru start",
-      :stop     => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru stop",
+      :startj   => ". /Applications/Aptana_Jaxer/scripts/start.sh",
+      :starts   => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru start",
+      :stopj    => ". /Applications/Aptana_Jaxer/scripts/stop.sh",
+      :stops    => "thin -s1 -C thin/development_config.yml --rackup thin/config.ru stop",
+      :start    => [:startj, :starts],
+      :stop     => [:stops, :stopj],
+      :restartj => [:stopj, :startj],
+      :restarts => [:stops, :starts],
       :cleanup  => :stop,
       :sc       => :skip,
       :routes   => :skip,

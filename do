@@ -1,11 +1,21 @@
 #!/usr/bin/ruby
 class DoerException < Exception; end
+class ProjectMissingError < DoerException
+  def to_s
+    "No such project"
+  end
+end
+class CommandMissingError < DoerException
+  def to_s
+    "No such command"
+  end
+end
 
 load 'dofile'
 
 class Doer
-  class << self
-    def run(who, what, args)
+  class << self  
+    def run(who, what, args, verbose = true)
       command = find_cmd(who, what)
       templates, replacements = normalize_cmd(who, command)
       commands = apply_replacements(templates, replacements, args)
@@ -17,9 +27,14 @@ class Doer
         end
         puts "\n\n"
       end
-    rescue DoerException => e
-      puts e.message
-      exit
+    rescue CommandMissingError => e
+      puts "#{e.message} \"#{what}\"" if verbose
+      false
+    rescue ProjectMissingError => e
+      puts "#{e.message} \"#{who}\"" if verbose
+      false
+    else
+      true
     end
     
     private
@@ -54,8 +69,8 @@ class Doer
     end
     
     def find_cmd(project, command)
-      raise(DoerException, "No such project \"#{project}\"") unless PROJECTS.key?(project)
-      cmd = PROJECTS[project][command] || PROJECTS[:default][command] || raise(DoerException, "No such command \"#{command}\"")
+      raise(ProjectMissingError) unless PROJECTS.key?(project)
+      cmd = PROJECTS[project][command] || PROJECTS[:default][command] || raise(CommandMissingError)
       cmd = [cmd] unless cmd.class == Array
       cmd
     end
@@ -84,7 +99,8 @@ args  = input
 
 what = what.downcase.to_sym
 if (!who || who == 'all')
-  (PROJECTS.keys - [:default]).each{|p| Doer::run(p, what, args)}
+  results = (PROJECTS.keys - [:default]).collect{|p| Doer::run(p, what, args, false)}
+  puts "No such project or command" if results.all?{|result| !result}
 else
   who = who.downcase.to_sym
   Doer::run(who, what, args)
